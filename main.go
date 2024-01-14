@@ -1,5 +1,4 @@
-// Runs an api request against the school endpoint and sends a message to a telegram chat
-package main
+package inner
 
 import (
 	"bytes"
@@ -7,10 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
-	// "github.com/aws/aws-lambda-go/lambda"
+  wmill "github.com/windmill-labs/windmill-go-client"
 )
 
 type response struct {
@@ -46,14 +44,15 @@ type mealList struct {
 }
 
 func sendMessage(msg string) {
-	token := os.Getenv("TELEGRAM_TOKEN")
-	chatID := os.Getenv("TELEGRAM_CHAT")
+	token, _ := wmill.GetVariable("u/elxilote/TELEGRAM_TOKEN")
+	chatID, _ := wmill.GetVariable("u/elxilote/TELEGRAM_CHAT")
+  
 
   if token == "" || chatID == "" {
     fmt.Println("Missing token or chat id")
     return
   }
-	
+
   var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 	body, _ := json.Marshal(map[string]string{
 		"chat_id": chatID,
@@ -66,20 +65,21 @@ func sendMessage(msg string) {
 	defer req.Body.Close()
 }
 
-func getMeals() {
+func getMeals() (string) {
 	today := time.Now().Format("1-2-2006")
-	baseURL := os.Getenv("BASE_URL")
+	baseURL, _ := wmill.GetVariable("u/elxilote/BASE_URL")
+  fmt.Println(baseURL)
 	var url = fmt.Sprintf("%s/%s/%s/0", baseURL, today, today)
 
 	req, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return ""
 	}
 
 	if req.StatusCode != 200 {
 		fmt.Println("Error: ", req.StatusCode)
-		return
+		return ""
 	}
 
 	var response response
@@ -119,9 +119,12 @@ func getMeals() {
 		payload += fmt.Sprintf("For %s: %s\n", meal.Type, meal.Item)
 	}
 	sendMessage(payload)
+  return payload
 }
 
-func main() {
-	// lambda.Start(getMeals)
-  getMeals()
+func main() (string, error){
+  meals := getMeals()
+  fmt.Println(meals)
+  return meals, nil
 }
+

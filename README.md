@@ -5,7 +5,5 @@ Keeping track on what the kids eat is important!
 
 - No dependencies
 - Secrets as env variables
-- Runs in a lambda func and on a schedule 
 
-Infrastructure code for this project at https://github.com/mvaldes14/terraform
-
+This runs as a scheduled job over at windmill.

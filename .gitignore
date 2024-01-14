@@ -21,7 +21,4 @@
 # Go workspace file
 go.work
 
-# Env file
-.env
-
-main
+.direnv
