@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-lambda-go/lambda"
+	// "github.com/aws/aws-lambda-go/lambda"
 )
 
 type response struct {
@@ -48,7 +48,13 @@ type mealList struct {
 func sendMessage(msg string) {
 	token := os.Getenv("TELEGRAM_TOKEN")
 	chatID := os.Getenv("TELEGRAM_CHAT")
-	var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+
+  if token == "" || chatID == "" {
+    fmt.Println("Missing token or chat id")
+    return
+  }
+	
+  var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 	body, _ := json.Marshal(map[string]string{
 		"chat_id": chatID,
 		"text":    msg,
@@ -113,9 +119,9 @@ func getMeals() {
 		payload += fmt.Sprintf("For %s: %s\n", meal.Type, meal.Item)
 	}
 	sendMessage(payload)
-
 }
 
 func main() {
-	lambda.Start(getMeals)
+	// lambda.Start(getMeals)
+  getMeals()
 }
