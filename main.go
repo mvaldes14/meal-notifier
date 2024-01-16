@@ -1,4 +1,4 @@
-package inner
+package inner 
 
 import (
 	"bytes"
@@ -21,6 +21,7 @@ type response struct {
 					Name         string `json:"name"`
 					FoodItemList struct {
 						Data []struct {
+              LocationName string `json:"location_name"`
 							ItemName    string `json:"item_Name"`
 							Description string `json:"description"`
 						} `json:"data"`
@@ -95,22 +96,26 @@ func getMeals() (string) {
 		for _, block := range menu.MenuBlocks {
 			for _, line := range block.CafeteriaLineList.Data {
 				for _, item := range line.FoodItemList.Data {
-					if block.BlockName == "Breakfast" {
-						breakfast := meal{
+          if item.LocationName ==  "CRES- Alternate" {
+            continue
+          }
+					switch block.BlockName {
+						case "Breakfast":
+							breakfast := meal{
 							Type: "Breakfast",
 							Item: item.ItemName,
-						}
-						message.Meals = append(message.Meals, breakfast)
-					} else {
-						lunch := meal{
+							}
+							message.Meals = append(message.Meals, breakfast)
+						case "Lunch":
+							lunch := meal{
 							Type: "Lunch",
 							Item: item.ItemName,
 						}
 						message.Meals = append(message.Meals, lunch)
-					}
 				}
 			}
 		}
+	}
 	}
 
 	var payload string
