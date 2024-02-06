@@ -10,4 +10,4 @@ COPY . /app
 
 RUN go build -o meal-notifier .
 
-ENTRYPOINT ["./meal-notifier"]
+ENTRYPOINT ["doppler","run","--","./meal-notifier"]

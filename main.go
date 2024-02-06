@@ -68,9 +68,9 @@ func sendMessage(msg string) {
 func getMeals() string {
 	today := time.Now().Format("1-2-2006")
 	baseURL := os.Getenv("BASE_URL")
-  if !strings.HasPrefix(baseURL, "http") {
-    return "URL Not provided"
-  }
+	if !strings.HasPrefix(baseURL, "http") {
+		return "URL Not provided"
+	}
 
 	fmt.Println(baseURL)
 	var url = fmt.Sprintf("%s/%s/%s/0", baseURL, today, today)
