@@ -1,4 +1,4 @@
-package inner 
+package main
 
 import (
 	"bytes"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"time"
-
-  wmill "github.com/windmill-labs/windmill-go-client"
 )
 
 type response struct {
@@ -21,9 +21,9 @@ type response struct {
 					Name         string `json:"name"`
 					FoodItemList struct {
 						Data []struct {
-              LocationName string `json:"location_name"`
-							ItemName    string `json:"item_Name"`
-							Description string `json:"description"`
+							LocationName string `json:"location_name"`
+							ItemName     string `json:"item_Name"`
+							Description  string `json:"description"`
 						} `json:"data"`
 					} `json:"foodItemList"`
 				} `json:"data"`
@@ -45,16 +45,15 @@ type mealList struct {
 }
 
 func sendMessage(msg string) {
-	token, _ := wmill.GetVariable("u/elxilote/TELEGRAM_TOKEN")
-	chatID, _ := wmill.GetVariable("u/elxilote/TELEGRAM_CHAT")
-  
+	token := os.Getenv("TELEGRAM_TOKEN")
+	chatID := os.Getenv("TELEGRAM_CHAT")
 
-  if token == "" || chatID == "" {
-    fmt.Println("Missing token or chat id")
-    return
-  }
+	if token == "" || chatID == "" {
+		fmt.Println("Missing token or chat id")
+		return
+	}
 
-  var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+	var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 	body, _ := json.Marshal(map[string]string{
 		"chat_id": chatID,
 		"text":    msg,
@@ -66,10 +65,14 @@ func sendMessage(msg string) {
 	defer req.Body.Close()
 }
 
-func getMeals() (string) {
+func getMeals() string {
 	today := time.Now().Format("1-2-2006")
-	baseURL, _ := wmill.GetVariable("u/elxilote/BASE_URL")
-  fmt.Println(baseURL)
+	baseURL := os.Getenv("BASE_URL")
+  if !strings.HasPrefix(baseURL, "http") {
+    return "URL Not provided"
+  }
+
+	fmt.Println(baseURL)
 	var url = fmt.Sprintf("%s/%s/%s/0", baseURL, today, today)
 
 	req, err := http.Get(url)
@@ -96,26 +99,26 @@ func getMeals() (string) {
 		for _, block := range menu.MenuBlocks {
 			for _, line := range block.CafeteriaLineList.Data {
 				for _, item := range line.FoodItemList.Data {
-          if item.LocationName ==  "CRES- Alternate" {
-            continue
-          }
+					if item.LocationName == "CRES- Alternate" {
+						continue
+					}
 					switch block.BlockName {
-						case "Breakfast":
-							breakfast := meal{
+					case "Breakfast":
+						breakfast := meal{
 							Type: "Breakfast",
 							Item: item.ItemName,
-							}
-							message.Meals = append(message.Meals, breakfast)
-						case "Lunch":
-							lunch := meal{
+						}
+						message.Meals = append(message.Meals, breakfast)
+					case "Lunch":
+						lunch := meal{
 							Type: "Lunch",
 							Item: item.ItemName,
 						}
 						message.Meals = append(message.Meals, lunch)
+					}
 				}
 			}
 		}
-	}
 	}
 
 	var payload string
@@ -124,12 +127,10 @@ func getMeals() (string) {
 		payload += fmt.Sprintf("For %s: %s\n", meal.Type, meal.Item)
 	}
 	sendMessage(payload)
-  return payload
+	return payload
 }
 
-func main() (string, error){
-  meals := getMeals()
-  fmt.Println(meals)
-  return meals, nil
+func main() {
+	meals := getMeals()
+	fmt.Println(meals)
 }
-
