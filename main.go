@@ -45,8 +45,8 @@ type mealList struct {
 }
 
 func sendMessage(msg string) {
-	token := os.Getenv("TELEGRAM_TOKEN")
-	chatID := os.Getenv("TELEGRAM_CHAT")
+	token := os.Getenv("TELEGRAM_HOMELAB_TOKEN")
+	chatID := os.Getenv("TELEGRAM_CHAT_ID")
 
 	if token == "" || chatID == "" {
 		fmt.Println("Missing token or chat id")
