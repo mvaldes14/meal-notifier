@@ -72,7 +72,6 @@ func getMeals() string {
 		return "URL Not provided"
 	}
 
-	fmt.Println(baseURL)
 	var url = fmt.Sprintf("%s/%s/%s/0", baseURL, today, today)
 
 	req, err := http.Get(url)
