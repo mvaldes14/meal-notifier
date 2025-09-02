@@ -1,88 +1,73 @@
+// package main runs the entire codebase
 package main
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
-type response struct {
-	MenuSchedules []struct {
-		MenuBlocks []struct {
-			BlockName         string `json:"blockName"`
-			ScheduledDate     string `json:"scheduledDate"`
-			CafeteriaLineList struct {
-				Data []struct {
-					Name         string `json:"name"`
-					FoodItemList struct {
-						Data []struct {
-							LocationName string `json:"location_name"`
-							ItemName     string `json:"item_Name"`
-							Description  string `json:"description"`
-						} `json:"data"`
-					} `json:"foodItemList"`
-				} `json:"data"`
-			} `json:"cafeteriaLineList"`
-		} `json:"menuBlocks"`
-	} `json:"menuSchedules"`
+type application struct {
+	client          *http.Client
+	logger          *slog.Logger
+	telegramToken   string
+	telegramChatID  string
+	baseURL         string
+	telegramMessage string
 }
 
-type meal struct {
-	Type        string
-	Date        string
-	School      string
-	Item        string
-	Description string
-}
-
-type mealList struct {
-	Meals []meal
-}
-
-func sendMessage(msg string) {
+func NewApp() (*application, error) {
 	token := os.Getenv("TELEGRAM_HOMELAB_TOKEN")
 	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	baseURL := os.Getenv("BASE_URL")
 
-	if token == "" || chatID == "" {
-		fmt.Println("Missing token or chat id")
-		return
+	if token == "" || chatID == "" || baseURL == "" {
+		return &application{}, errors.New("missing required environment variables")
 	}
 
-	var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+	client := &http.Client{Timeout: 10 * time.Second}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	return &application{
+		client:         client,
+		logger:         logger,
+		telegramToken:  token,
+		telegramChatID: chatID,
+		baseURL:        baseURL,
+	}, nil
+}
+
+func (a application) sendMessage() error {
+	var url = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", a.telegramToken)
 	body, _ := json.Marshal(map[string]string{
-		"chat_id": chatID,
-		"text":    msg,
+		"chat_id": a.telegramChatID,
+		"text":    a.telegramMessage,
 	})
 	req, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return
+		return errors.New("failed to send message")
 	}
 	defer req.Body.Close()
+	return nil
 }
 
-func getMeals() string {
+func (a application) Init() error {
 	today := time.Now().Format("1-2-2006")
-	baseURL := os.Getenv("BASE_URL")
-	if !strings.HasPrefix(baseURL, "http") {
-		return "URL Not provided"
-	}
+	var url = fmt.Sprintf("%s/%s/%s/0", a.baseURL, today, today)
 
-	var url = fmt.Sprintf("%s/%s/%s/0", baseURL, today, today)
-
-	req, err := http.Get(url)
+	req, err := a.client.Get(url)
 	if err != nil {
-		fmt.Println(err)
-		return ""
+		return err
 	}
 
 	if req.StatusCode != 200 {
-		fmt.Println("Error: ", req.StatusCode)
-		return ""
+		a.logger.Error("Failed to fetch meal data", slog.Int("status_code", req.StatusCode))
+		return err
 	}
 
 	var response response
@@ -125,11 +110,16 @@ func getMeals() string {
 	for _, meal := range message.Meals {
 		payload += fmt.Sprintf("For %s: %s\n", meal.Type, meal.Item)
 	}
-	sendMessage(payload)
-	return payload
+	a.sendMessage()
+	return nil
 }
 
 func main() {
-	meals := getMeals()
-	fmt.Println(meals)
+	app, err := NewApp()
+	if err != nil {
+		panic(err)
+	}
+	app.logger.Info("Starting meal fetcher")
+	app.Init()
+	app.logger.Info("Completed meal fetcher")
 }
