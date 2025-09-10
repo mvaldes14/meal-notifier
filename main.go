@@ -28,7 +28,7 @@ func NewApp() (*application, error) {
 	baseURL := os.Getenv("BASE_URL")
 
 	if token == "" || chatID == "" || baseURL == "" {
-		return &application{}, errors.New("missing required environment variables")
+		return &application{}, errors.New("Missing required environment variables: TELEGRAM_HOMELAB_TOKEN, TELEGRAM_CHAT_ID, BASE_URL")
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -58,6 +58,7 @@ func (a application) sendMessage() error {
 
 func (a application) Init() error {
 	today := time.Now().Format("1-2-2006")
+	a.logger.Info(fmt.Sprintf("Fetching data for %s", today))
 	var url = fmt.Sprintf("%s/%s/%s/0", a.baseURL, today, today)
 
 	req, err := a.client.Get(url)
@@ -73,7 +74,10 @@ func (a application) Init() error {
 	var response response
 	data, err := io.ReadAll(req.Body)
 
-	json.Unmarshal(data, &response)
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return err
+	}
 
 	defer req.Body.Close()
 
@@ -110,6 +114,7 @@ func (a application) Init() error {
 	for _, meal := range message.Meals {
 		payload += fmt.Sprintf("For %s: %s\n", meal.Type, meal.Item)
 	}
+	a.telegramMessage = payload
 	a.sendMessage()
 	return nil
 }
@@ -120,6 +125,9 @@ func main() {
 		panic(err)
 	}
 	app.logger.Info("Starting meal fetcher")
-	app.Init()
+	err = app.Init()
+	if err != nil {
+		app.logger.Error(error.Error(err))
+	}
 	app.logger.Info("Completed meal fetcher")
 }
